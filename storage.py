@@ -9,8 +9,29 @@ class FileStorage:
         self.database_path = database_path
         os.makedirs(database_path, exist_ok=True)
 
-    def create_table(self, table_name, columns, primary_key):
-        schema = TableSchema(table_name, columns, primary_key)
+    def create_table(
+        self, table_name, columns, primary_key, foreign_keys=None
+    ):
+        schema = TableSchema(
+            table_name, columns, primary_key, foreign_keys
+        )
+
+        for column, reference in schema.foreign_keys.items():
+            ref_table, ref_column = reference
+            ref_schema = self.get_schema(ref_table)
+
+            if ref_column not in ref_schema.columns:
+                raise ValueError(
+                    f"Столбец {ref_column} не существует в таблице {ref_table}"
+                )
+
+            if ref_schema.columns[ref_column] != schema.columns[column]:
+                raise ValueError("Типы внешнего и связанного ключей не совпадают")
+
+            if ref_column != ref_schema.primary_key:
+                raise ValueError(
+                    "Внешний ключ должен ссылаться на PRIMARY KEY"
+                )
 
         file_path = os.path.join(
             self.database_path, f"{table_name}.csv"
@@ -59,7 +80,6 @@ class FileStorage:
                     "Файл таблицы не соответствует схеме"
                 )
 
-            # Проверяем уникальность PRIMARY KEY
             primary_key = schema.primary_key
             new_id = str(record[primary_key])
 
@@ -70,6 +90,21 @@ class FileStorage:
                         f"{primary_key}={new_id} уже существует"
                     )
 
+            for column, reference in schema.foreign_keys.items():
+                ref_table, ref_column = reference
+                referenced_rows = self.read_all(ref_table)
+                new_value = str(record[column])
+
+                if not any(
+                    row[ref_column] == new_value
+                    for row in referenced_rows
+                ):
+                    raise ValueError(
+                        f"Нарушение FOREIGN KEY: значение "
+                        f"{record[column]} отсутствует в "
+                        f"{ref_table}.{ref_column}"
+                    )
+        
         with open(file_path, "a", newline="", encoding="utf-8") as file:
             writer = csv.DictWriter(
                 file, fieldnames=list(schema.columns.keys())
