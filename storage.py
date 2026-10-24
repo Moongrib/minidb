@@ -129,3 +129,77 @@ class FileStorage:
             file_path, "r", newline="", encoding="utf-8"
         ) as file:
             return list(csv.DictReader(file))
+
+    
+    def select(self, table_name, columns=None, where=None):
+        schema = self.get_schema(table_name)
+        rows = self.read_all(table_name)
+
+        if columns is None:
+            columns = list(schema.columns.keys())
+
+        for column in columns:
+            if column not in schema.columns:
+                raise ValueError(
+                    f"Столбец {column} не существует в таблице {table_name}"
+                )
+            
+        if where is not None:
+            if len(where) != 3:
+                raise ValueError(
+                    "Условие должно иметь вид (столбец, оператор, значение)"
+                )
+
+            column, operator, value = where
+
+            if column not in schema.columns:
+                raise ValueError(f"Неизвестный столбец: {column}")
+
+            operators = {"=", "!=", ">", "<", ">=", "<="}
+            if operator not in operators:
+                raise ValueError(f"Неподдерживаемый оператор: {operator}")
+
+            data_type = schema.columns[column]
+
+            if data_type == "INT":
+                if isinstance(value, bool):
+                    raise TypeError("Ожидалось значение типа INT")
+                value = int(value)
+            elif data_type == "FLOAT":
+                if isinstance(value, bool):
+                    raise TypeError("Ожидалось значение типа FLOAT")
+                value = float(value)
+            elif data_type == "STRING":
+                value = str(value)
+
+            def convert(raw_value):
+                if data_type == "INT":
+                    return int(raw_value)
+                if data_type == "FLOAT":
+                    return float(raw_value)
+                return raw_value
+
+            def matches(row):
+                actual = convert(row[column])
+
+                if operator == "=":
+                    return actual == value
+                if operator == "!=":
+                    return actual != value
+                if operator == ">":
+                    return actual > value
+                if operator == "<":
+                    return actual < value
+                if operator == ">=":
+                    return actual >= value
+                if operator == "<=":
+                    return actual <= value
+
+            rows = [row for row in rows if matches(row)]
+
+ 
+        return [
+            {column: row[column] for column in columns}
+            for row in rows
+        ]
+
