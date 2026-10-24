@@ -32,9 +32,13 @@ def main():
             "dataset_id": "INT",
             "model_id": "INT",
             "accuracy": "FLOAT",
-            "status": "STRING",
+            "status": "STRING"
         },
         primary_key="id",
+        foreign_keys={
+            "dataset_id": ("datasets", "id"),
+            "model_id": ("models", "id")
+        }
     )
 
     if not db.read_all("datasets"):
