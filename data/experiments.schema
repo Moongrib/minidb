@@ -1,0 +1,7 @@
+TABLE	experiments
+PRIMARY_KEY	id
+COLUMN	id	INT
+COLUMN	dataset_id	INT
+COLUMN	model_id	INT
+COLUMN	accuracy	FLOAT
+COLUMN	status	STRING

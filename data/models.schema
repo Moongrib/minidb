@@ -1,0 +1,5 @@
+TABLE	models
+PRIMARY_KEY	id
+COLUMN	id	INT
+COLUMN	name	STRING
+COLUMN	version	STRING
