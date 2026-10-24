@@ -37,6 +37,7 @@ class FileStorage:
     def get_schema(self, table_name):
         return TableSchema.load(self.database_path, table_name)
 
+    
     def insert(self, table_name, record):
         schema = self.get_schema(table_name)
         schema.validate_record(record)
@@ -47,23 +48,34 @@ class FileStorage:
 
         if not os.path.exists(file_path):
             raise FileNotFoundError(
-                f"Таблица {table_name} не существует"
+                f"Файл таблицы {table_name} не найден"
             )
 
-        with open(
-            file_path, "r", newline="", encoding="utf-8"
-        ) as file:
-            reader = csv.reader(file)
-            columns = next(reader, None)
+        with open(file_path, "r", newline="", encoding="utf-8") as file:
+            reader = csv.DictReader(file)
 
-        if columns != list(schema.columns.keys()):
-            raise ValueError("Файл таблицы не соответствует схеме")
+            if reader.fieldnames != list(schema.columns.keys()):
+                raise ValueError(
+                    "Файл таблицы не соответствует схеме"
+                )
 
-        with open(
-            file_path, "a", newline="", encoding="utf-8"
-        ) as file:
-            writer = csv.DictWriter(file, fieldnames=columns)
+            # Проверяем уникальность PRIMARY KEY
+            primary_key = schema.primary_key
+            new_id = str(record[primary_key])
+
+            for row in reader:
+                if row[primary_key] == new_id:
+                    raise ValueError(
+                        f"Нарушение PRIMARY KEY: "
+                        f"{primary_key}={new_id} уже существует"
+                    )
+
+        with open(file_path, "a", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(
+                file, fieldnames=list(schema.columns.keys())
+            )
             writer.writerow(record)
+
 
     def read_all(self, table_name):
         
