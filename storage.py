@@ -111,6 +111,17 @@ class FileStorage:
             )
             writer.writerow(record)
 
+    
+    def insert_many(self, table_name, records):
+        if not records:
+            raise ValueError("Список записей пуст")
+
+        for record in records:
+            self.insert(table_name, record)
+
+        print(f"Добавлено записей: {len(records)}")
+
+
 
     def read_all(self, table_name):
         

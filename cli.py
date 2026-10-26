@@ -61,14 +61,31 @@ def insert_record():
         return
 
     schema = db.get_schema(table)
-    record = {}
 
-    for column, data_type in schema.columns.items():
-        value = input(f"{column} ({data_type}): ")
-        record[column] = parse_value(value, data_type)
+    try:
+        count = int(input("Сколько записей добавить? "))
 
-    db.insert(table, record)
-    print("Запись добавлена.")
+        if count < 1:
+            print("Количество должно быть больше нуля.")
+            return
+
+        records = []
+
+        for i in range(count):
+            print(f"\n--- Запись {i + 1} из {count} ---")
+            record = {}
+
+            for column, data_type in schema.columns.items():
+                value = input(f"{column} ({data_type}): ")
+                record[column] = parse_value(value, data_type)
+
+            records.append(record)
+
+        db.insert_many(table, records)
+        print(f"Успешно добавлено записей: {count}")
+
+    except (ValueError, TypeError, FileNotFoundError) as error:
+        print("Ошибка:", error)
 
 def select_records():
     table = choose_table()
@@ -181,6 +198,105 @@ def delete_record():
     else:
         print("Удаление отменено.")
 
+def create_table():
+    print("\n=== CREATE TABLE ===")
+
+    table_name = input("Название новой таблицы: ").strip()
+
+    if not table_name:
+        print("Название таблицы не может быть пустым.")
+        return
+
+    columns = {}
+
+    print("\nДобавление столбцов")
+    print("Доступные типы: INT, STRING, FLOAT")
+    print("Для завершения введи end в названии столбца.")
+
+    while True:
+        column = input("Название столбца: ").strip()
+
+        if column.lower() == "end":
+            break
+
+        if not column:
+            print("Название столбца не может быть пустым.")
+            continue
+
+        if column in columns:
+            print("Такой столбец уже существует.")
+            continue
+
+        data_type = input(
+            f"Тип столбца {column} (INT/STRING/FLOAT): "
+        ).strip().upper()
+
+        if data_type not in {"INT", "STRING", "FLOAT"}:
+            print("Ошибка: допустимы только INT, STRING, FLOAT.")
+            continue
+
+        columns[column] = data_type
+
+    if not columns:
+        print("Таблица должна содержать хотя бы один столбец.")
+        return
+
+    primary_key = input(
+        f"Название первичного ключа из {list(columns)}: "
+    ).strip()
+
+    if primary_key not in columns:
+        print("Ошибка: первичный ключ должен быть одним из столбцов.")
+        return
+
+    foreign_keys = {}
+
+    answer = input(
+        "Добавить внешние ключи? (да/нет): "
+    ).strip().lower()
+
+    if answer == "да":
+        while True:
+            column = input(
+                "Столбец для внешнего ключа (end — закончить): "
+            ).strip()
+
+            if column.lower() == "end":
+                break
+
+            if column not in columns:
+                print("Такого столбца в новой таблице нет.")
+                continue
+
+            ref_table = input(
+                "Название существующей таблицы: "
+            ).strip()
+
+            try:
+                ref_schema = db.get_schema(ref_table)
+            except (ValueError, FileNotFoundError):
+                print("Не удалось найти указанную таблицу.")
+                continue
+
+            ref_column = input(
+                f"Столбец для ссылки из {list(ref_schema.columns)}: "
+            ).strip()
+
+            if ref_column not in ref_schema.columns:
+                print("Такого столбца в указанной таблице нет.")
+                continue
+
+            foreign_keys[column] = (ref_table, ref_column)
+
+    db.create_table(
+        table_name,
+        columns,
+        primary_key=primary_key,
+        foreign_keys=foreign_keys or None
+    )
+
+    print(f"Таблица '{table_name}' успешно создана.")
+
 
 def main():
     if not db.list_tables():
@@ -191,10 +307,11 @@ def main():
         print("\n=== MiniDB ===")
         print("1. Показать таблицы")
         print("2. Просмотреть данные")
-        print("3. Добавить запись")
+        print("3. Добавить запись (INSERT)")
         print("4. Найти записи (SELECT)")
         print("5. Изменить запись (UPDATE)")
         print("6. Удалить запись (DELETE)")
+        print("7. Создать таблицу (CREATE TABLE)")
         print("0. Выход")
 
         choice = input("Выберите действие: ").strip()
@@ -214,6 +331,8 @@ def main():
                 update_record()
             elif choice == "6":
                 delete_record()
+            elif choice == "7":
+                create_table()
             elif choice == "0":
                 print("До свидания!")
                 break

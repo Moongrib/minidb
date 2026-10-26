@@ -80,25 +80,25 @@ MiniDB — собственная мини-СУБД на Python с файлов�
 Запуск основной программы:
 
 ```bash
-python main.py
+python3 main.py
 ```
 
 Запуск консольного меню, если оно запускается отдельно:
 
 ```bash
-python cli.py
+python3 cli.py
 ```
 
 Заполнение базы тестовыми данными:
 
 ```bash
-python seed_data.py
+python3 seed_data.py
 ```
 
 Запуск автоматических тестов:
 
 ```bash
-python -m unittest test_minidb.py
+python3 -m unittest test_minidb.py
 ```
 
 ## Хранение данных
